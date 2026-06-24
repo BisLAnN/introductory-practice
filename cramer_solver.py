@@ -72,11 +72,18 @@ def cramer_solve(matrix, free_terms):
     main_det = determinant(matrix)
 
     if abs(main_det) < 1e-12:
-        return None, main_det
 
-    n = len(matrix)
+        for i in range(len(matrix)):
+            modified = replace_column(matrix, i, free_terms)
+
+            if abs(determinant(modified)) > 1e-12:
+                return "none", main_det
+
+        return "infinite", main_det
+
     solution = []
-    for i in range(n):
+
+    for i in range(len(matrix)):
         modified = replace_column(matrix, i, free_terms)
         det_i = determinant(modified)
         solution.append(det_i / main_det)
@@ -110,8 +117,13 @@ def main():
 
     print(f"\nглавный определитель: {main_det:.2f}")
 
-    if solution is None:
-        print("система не имеет единственного решения (главный определитель = 0)")
+    if solution == "none":
+        print("СЛУ не имеет решений (система несовместа)")
+        print("Метод Крамера не применим!")
+        return
+
+    if solution == "infinite":
+        print("СЛУ имеет бесконечно много решений (неопределённая система)")
         print("Метод Крамера не применим!")
         return
 
