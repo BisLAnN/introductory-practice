@@ -22,7 +22,7 @@
 
 \subsection{Формулировка задачи}
 
-Требуется написать программу для решения системы линейных алгебраических уравнений методом Крамера. Количество неизвестных в системе может быть 2 или 3 (вариант 4). Программа должна проверять корректность входных данных и обрабатывать случаи, когда метод не применим.
+Требуется написать программу для решения системы линейных алгебраических уравнений методом Крамера. Количество неизвестных в системе может быть 2 или 3. Программа должна проверять корректность входных данных и обрабатывать случаи, когда метод не применим.
 
 Метод Крамера применяется к системе вида:
 \begin{equation}
@@ -58,6 +58,21 @@ x_i = \frac{\Delta_i}{\Delta}, \quad i = 1, 2, \dots, n
 
 где $M_{1k}$ --- миноры соответствующих элементов.
 
+Минором $M_{ik}$ элемента $a_{ik}$ называется определитель матрицы, 
+полученной из исходной вычёркиванием $i$-й строки и $k$-го столбца.
+
+Если главный определитель $\Delta = 0$, метод Крамера неприменим. 
+В этом случае система может либо не иметь решений, либо иметь 
+бесконечное множество решений. Для определения какой из случаев реализован, 
+вычисляются определители $\Delta_i$ вспомогательных матриц:
+
+\begin{itemize}
+\item если хотя бы один $\Delta_i \neq 0$ --- система несовместна 
+(решений нет);
+\item если все $\Delta_i = 0$ --- система неопределённа 
+(бесконечное множество решений).
+\end{itemize}
+
 \section{Ход работы}
 \label{sec:exp}
 
@@ -71,7 +86,9 @@ x_i = \frac{\Delta_i}{\Delta}, \quad i = 1, 2, \dots, n
 \item Считывает вектор свободных членов с проверкой.
 \item Выводит введённую систему для проверки пользователем.
 \item Вычисляет главный определитель $\Delta$ рекурсивным методом.
-\item Если $\Delta = 0$, сообщает об ошибке и завершает работу.
+\item Если $\Delta = 0$, вычисляет определители вспомогательных матриц: 
+если хотя бы один не равен нулю --- система несовместна, 
+если все равны нулю --- система неопределённа.
 \item Если $\Delta \neq 0$, вычисляет для каждой переменной определитель вспомогательной матрицы и применяет формулу Крамера.
 \item Выводит решение на экран.
 \end{enumerate}
@@ -84,7 +101,7 @@ def read_size():
     while True:
         raw = input("введите количество неизвестных (2 / 3): ").strip()
         if raw not in ("2", "3"):
-            print("ошибка! метод Крамера работает только для 2 или 3 неизвестных!")
+            print("ошибка! метод Крамера в этой программе работает только для 2 или 3 неизвестных!")
             continue
         return int(raw)
 
@@ -121,10 +138,13 @@ def read_vector(n):
 
 def determinant(matrix):
     n = len(matrix)
+
     if n == 1:
         return matrix[0][0]
+
     if n == 2:
         return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+
     total = 0.0
     for col in range(n):
         minor = []
@@ -133,12 +153,14 @@ def determinant(matrix):
             minor.append(minor_row)
         sign = 1 if col % 2 == 0 else -1
         total += sign * matrix[0][col] * determinant(minor)
+
     return total
 
 
 def replace_column(matrix, column_index, new_column):
+    n = len(matrix)
     new_matrix = []
-    for row in range(len(matrix)):
+    for row in range(n):
         new_row = matrix[row][:]
         new_row[column_index] = new_column[row]
         new_matrix.append(new_row)
@@ -147,43 +169,66 @@ def replace_column(matrix, column_index, new_column):
 
 def cramer_solve(matrix, free_terms):
     main_det = determinant(matrix)
+
     if abs(main_det) < 1e-12:
-        return None, main_det
+
+        for i in range(len(matrix)):
+            modified = replace_column(matrix, i, free_terms)
+
+            if abs(determinant(modified)) >= 1e-12:
+                return "none", main_det
+
+        return "infinite", main_det
+
     solution = []
+
     for i in range(len(matrix)):
         modified = replace_column(matrix, i, free_terms)
         det_i = determinant(modified)
         solution.append(det_i / main_det)
+
     return solution, main_det
 
 
 def print_system(matrix, free_terms):
     n = len(matrix)
-    print("\nвведённая система уравнений:")
+    print("\nвведённая система уравнений: ")
     for i in range(n):
         terms = []
         for j in range(n):
-            terms.append(f"{matrix[i][j]:.3f}*x{j + 1}")
+            terms.append(f"{matrix[i][j]:.1f}*x{j + 1}")
         line = " + ".join(terms)
-        print(f"  {line} = {free_terms[i]:.3f}")
+        print(f"  {line} = {free_terms[i]:.1f}")
 
 
 def main():
+    
     print("Решение СЛУ методом Крамера")
     print("-" * 40)
+
     n = read_size()
     matrix = read_matrix(n)
     free_terms = read_vector(n)
+
     print_system(matrix, free_terms)
+
     solution, main_det = cramer_solve(matrix, free_terms)
-    print(f"\nглавный определитель: {main_det:.6f}")
-    if solution is None:
-        print("система не имеет единственного решения (главный определитель = 0)")
-        print("метод Крамера не применим!")
+
+    print(f"\nглавный определитель: {main_det:.2f}")
+
+    if solution == "none":
+        print("СЛУ не имеет решений (система несовместа)")
+        print("Метод Крамера не применим!")
         return
-    print("\nрешение системы:")
+
+    if solution == "infinite":
+        print("СЛУ имеет бесконечное множество решений (неопределённая система)")
+        print("Метод Крамера не применим!")
+        return
+
+    print("\nрешение системы: ")
     for i, value in enumerate(solution):
-        print(f"  x{i + 1} = {value:.6f}")
+        print(f"  x{i + 1} = {value:.2f}")
 
 
 if __name__ == "__main__":
@@ -197,8 +242,6 @@ if __name__ == "__main__":
 \begin{equation}\label{eq:cramer}
 x_i = \frac{\Delta_i}{\Delta}, \quad \Delta \neq 0
 \end{equation}
-
-Ссылка на формулу~\eqref{eq:cramer}.
 
 \section{Примеры работы программы}
 \label{sec:examples}
@@ -219,7 +262,7 @@ x_1 - x_2 = 1
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{1.png}
+    \includegraphics[width=0.65\textwidth]{1.png}
     \caption{Результат выполнения Примера 1}
 \end{figure}
 
@@ -239,7 +282,7 @@ x_1 + 2x_2 + 3x_3 = 6 \\
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{2.png}
+    \includegraphics[width=0.65\textwidth]{2.png}
     \caption{Результат выполнения Примера 2}
 \end{figure}
 
@@ -257,18 +300,39 @@ x_1 + 2x_2 = 5 \\
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{3.png}
+    \includegraphics[width=0.6\textwidth]{3.png}
     \caption{Результат выполнения Примера 3}
+\end{figure}
+
+\subsection{Пример 4: Неопределённая система}
+
+Рассмотрим систему:
+\begin{equation}
+\begin{cases}
+x_1 + 2x_2 = 4 \\
+2x_1 + 4x_2 = 8
+\end{cases}
+\end{equation}
+
+Главный определитель: $\Delta = 0$. Все $\Delta_i = 0$. 
+Система имеет бесконечное множество решений.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{4.png}
+    \caption{Результат выполнения Примера 4}
 \end{figure}
 
 \section{Заключение}
 
-В ходе работы реализована программа на языке Python, которая решает системы линейных алгебраических уравнений методом Крамера для систем из двух и трёх неизвестных. Программа корректно проверяет входные данные, вычисляет определители и обрабатывает случай вырожденной системы.
+В ходе работы реализована программа на языке Python, которая решает системы линейных алгебраических уравнений методом Крамера для систем из двух и трёх неизвестных. Программа корректно проверяет входные данные, вычисляет определители и обрабатывает случаи несовместной и неопределённой системы.
 
 \addcontentsline{toc}{section}{Список литературы}
 \begin{thebibliography}{9}
+\bibitem{Demidovich-2003}Демидович Б.П., Марон И.А. Основы вычислительной математики. \newblock --- Москва: Физматгиз, 2003. 664~с.
 \bibitem{Korn-1984}Корн Г., Корн Т. Справочник по математике. \newblock --- Москва: Наука, 1984. 831~с.
+\bibitem{Lvovsky-2003}Львовский С.М. Набор и верстка в системе \LaTeX{}. \newblock --- 3-е издание, исправленное и дополненное, 2003. 448~с.
+\bibitem{Samarsky-1989}Самарский А.А., Гулин А.В. Численные методы. \newblock --- Москва: Наука, 1989. 432~с.
 \bibitem{Faddeev-1963}Фаддеев Д.К., Фаддеева В.Н. Вычислительные методы линейной алгебры. \newblock --- Москва: Физматгиз, 1963. 734~с.
 \end{thebibliography}
-
 \end{document}

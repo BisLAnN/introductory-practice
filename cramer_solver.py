@@ -76,7 +76,7 @@ def cramer_solve(matrix, free_terms):
         for i in range(len(matrix)):
             modified = replace_column(matrix, i, free_terms)
 
-            if abs(determinant(modified)) > 1e-12:
+            if abs(determinant(modified)) >= 1e-12:
                 return "none", main_det
 
         return "infinite", main_det
@@ -123,7 +123,7 @@ def main():
         return
 
     if solution == "infinite":
-        print("СЛУ имеет бесконечно много решений (неопределённая система)")
+        print("СЛУ имеет бесконечное множество решений (неопределённая система)")
         print("Метод Крамера не применим!")
         return
 
